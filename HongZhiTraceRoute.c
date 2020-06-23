@@ -49,7 +49,7 @@ int traceCount = 0;
 int msgCount = 0;
 double sendtime = 0.0;    
 int max_hop = -1;
-bool keepalive = false;
+int  tos = 0;
 int ttl   = 1;                 
 
 int   myoptind;
@@ -210,10 +210,10 @@ static void Usage(void)
 {
     printf("HongZhiTraceRoute \n");
     printf("-h                  Help, print this usage\n");
-    printf("-t <maximun_hop>            default 30\n");
+    printf("-t <maximun_hop>    Set the max number of hops, default 30\n");
     printf("-s <address>        address in dotted decimal\n");
-    printf("-d                  keep alive\n");
-    printf("-y <num>            ttl, default 64\n");
+    printf("-d                  TOS/DSCP, Set the TOS/DSCP (IPv4 type of service), default 0\n");
+    printf("-y <num>            first ttl, Start from the first_ttl hop , default 1\n");
 }
 
 u_int16_t checksum(unsigned short *buf, int size)
@@ -247,7 +247,7 @@ int main(int argc, char** argv)
     int ret,ch = 1;
     struct icmphdr icmphdr;
 
-    while ( (ch = GetOpt(argc, argv, "hdt:s:y:")) != -1) {
+    while ( (ch = GetOpt(argc, argv, "hd:t:s:y:")) != -1) {
         switch (ch) {
             case 'h' :
                 Usage();
@@ -259,7 +259,7 @@ int main(int argc, char** argv)
                 break;
 
             case 'd' :
-                keepalive = true;
+                tos = atoi(myoptarg);
                 break;
 
             case 'y' :
@@ -281,6 +281,12 @@ int main(int argc, char** argv)
         max_hop = 30;
     }
 
+    if(!(tos == 0 || tos == 32 || tos == 224 || tos == 192 || tos == 40 || tos == 56 || tos == 72 || tos == 88 || 
+        tos == 96 || tos == 112 || tos == 136 || tos == 144 || tos == 152 || tos == 160 || tos == 184)){
+        tos = 0;
+        printf("tos invalid\n");
+    }
+
     if (serverString == NULL) {
         printf("need to set destination address\n");
         Usage();
@@ -294,6 +300,7 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
     setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
+    setsockopt(sockfd, IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
 
     memset(&server, 0, sizeof(server));
     server.sin_family = PF_INET;
